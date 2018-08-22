@@ -6,6 +6,24 @@
 //  Copyright © 2018 Marcus Guimaraes. All rights reserved.
 //
 
+
+/*
+ NOTES:
+ To setup Vulkan:
+ 1. init a window system (GLFW)
+ 2. instantiate Vulkan with create info
+ 3. check extension support
+ 4. establish validation layers if in debug mode
+ 5. create and register message callback for layer errors
+ 6. pick a physical device and query its queue families
+ 7. init a logical device and queue using info from 6.
+ 
+ To set up graphics presentation:
+ 1. create a window surface (do this just after creating the Vk instance)
+ 2. check for presentation support and create presentation queue
+ */
+
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
@@ -16,6 +34,7 @@
 #include <vector>
 #include <cstring>
 #include <map>
+#include <set>
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -32,9 +51,10 @@ const std::vector<const char*> validationLayers = {
 
 struct QueueFamilyIndices {
     int graphicsFamily = -1; //-1 denotes no family found
+    int presentationFamily = -1;
     
     bool isComplete() {
-        return graphicsFamily >= 0;
+        return graphicsFamily >= 0 && presentationFamily >= 0;
     }
 };
 
@@ -79,6 +99,8 @@ private:
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
     VkDevice device;
     VkQueue graphicsQueue;
+    VkQueue presentQueue; //presentation queue
+    VkSurfaceKHR surface;
     
     void initWindow() {
         glfwInit();
@@ -91,6 +113,7 @@ private:
     void initVulkan() {
         createInstance();
         setupDebugCallback();
+        createSurface();
         pickPhysicalDevice();
         createLogicalDevice();
     }
@@ -167,6 +190,12 @@ private:
         
         if (CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &callback) != VK_SUCCESS) {
             throw std::runtime_error("Failed to setup debug callback");
+        }
+    }
+    
+    void createSurface() {
+        if (glfwCreateWindowSurface(instance, window, nullptr, &surface) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create window surface");
         }
     }
     
@@ -266,11 +295,19 @@ private:
         
         int i = 0;
         for (const auto& queueFamily : queueFamilies) {
+            VkBool32 presentationSupport = false;
+            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentationSupport);
+            if (queueFamily.queueCount > 0 && presentationSupport) {
+                indices.presentationFamily = i;
+            }
+            
             if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
                 indices.graphicsFamily = i;
             }
             
-            if (indices.isComplete()) break;
+            if (indices.isComplete()){
+                break;
+            }
             
             i++;
         }
@@ -279,22 +316,30 @@ private:
     }
     
     void createLogicalDevice() {
+        //written in logical devices chapter, modified in window surface chapter
+        
         QueueFamilyIndices indices = findQueueFamilies(physicalDevice);
         
-        VkDeviceQueueCreateInfo queueCreateInfo = {};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = indices.graphicsFamily;
-        queueCreateInfo.queueCount = 1;
+        std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+        std::set<int> uniqueQueueFamilies = {indices.graphicsFamily, indices.presentationFamily};
         
         float queuePriority = 1.0f;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
+        
+        for (int queueFamily : uniqueQueueFamilies) {
+            VkDeviceQueueCreateInfo queueCreateInfo = {};
+            queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+            queueCreateInfo.queueFamilyIndex = queueFamily;
+            queueCreateInfo.queueCount = 1;
+            queueCreateInfo.pQueuePriorities = &queuePriority;
+            queueCreateInfos.push_back(queueCreateInfo);
+        }
         
         VkPhysicalDeviceFeatures deviceFeatures = {};
         
         VkDeviceCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        createInfo.pQueueCreateInfos = &queueCreateInfo;
-        createInfo.queueCreateInfoCount = 1;
+        createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+        createInfo.pQueueCreateInfos = queueCreateInfos.data();
         createInfo.pEnabledFeatures = &deviceFeatures;
         
         createInfo.enabledExtensionCount = 0;
@@ -310,6 +355,7 @@ private:
         }
         
         vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
+        vkGetDeviceQueue(device, indices.presentationFamily, 0, &presentQueue);
     }
 
     void mainLoop() {
@@ -324,6 +370,7 @@ private:
             DestroyDebugUtilsMessengerEXT(instance, callback, nullptr);
         }
         
+        vkDestroySurfaceKHR(instance, surface, nullptr);
         vkDestroyInstance(instance, nullptr);
         
         glfwDestroyWindow(window);
