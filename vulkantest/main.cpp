@@ -9,7 +9,7 @@
 
 /*
  NOTES:
- To setup Vulkan:
+ To set up Vulkan:
  1. init a window system (GLFW)
  2. instantiate Vulkan with create info
  3. check extension support
@@ -26,6 +26,9 @@
     b. find best swapchain settings
     c. create swapchain
  4. create image views
+ 
+ To set up graphics pipeline:
+ 
  */
 
 
