@@ -37,6 +37,11 @@
 		2CDA21CC212CB80B00B9CE23 /* libglfw.3.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libglfw.3.3.dylib; path = ../../../../../usr/local/lib/libglfw.3.3.dylib; sourceTree = "<group>"; };
 		2CDA21CE212CB84400B9CE23 /* libvulkan.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libvulkan.1.dylib; path = "../vulkansdk-macos-1.1.82.1/macOS/lib/libvulkan.1.dylib"; sourceTree = "<group>"; };
 		2CDA21D0212CB84D00B9CE23 /* libvulkan.1.1.82.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libvulkan.1.1.82.dylib; path = "../vulkansdk-macos-1.1.82.1/macOS/lib/libvulkan.1.1.82.dylib"; sourceTree = "<group>"; };
+		2CDA21D8212DE9C000B9CE23 /* shader.frag */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = shader.frag; sourceTree = "<group>"; };
+		2CDA21D9212DE9C000B9CE23 /* shader.vert */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = shader.vert; sourceTree = "<group>"; };
+		2CDA21DA212DED3B00B9CE23 /* compile.sh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.sh; path = compile.sh; sourceTree = "<group>"; };
+		2CDA21DB212DF1ED00B9CE23 /* vert.spv */ = {isa = PBXFileReference; lastKnownFileType = file; path = vert.spv; sourceTree = "<group>"; };
+		2CDA21DC212DF1ED00B9CE23 /* frag.spv */ = {isa = PBXFileReference; lastKnownFileType = file; path = frag.spv; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +78,7 @@
 		2CDA21C3212CB5D900B9CE23 /* vulkantest */ = {
 			isa = PBXGroup;
 			children = (
+				2CDA21D5212DE5A000B9CE23 /* shaders */,
 				2CDA21C4212CB5D900B9CE23 /* main.cpp */,
 			);
 			path = vulkantest;
@@ -86,6 +92,18 @@
 				2CDA21CC212CB80B00B9CE23 /* libglfw.3.3.dylib */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		2CDA21D5212DE5A000B9CE23 /* shaders */ = {
+			isa = PBXGroup;
+			children = (
+				2CDA21DC212DF1ED00B9CE23 /* frag.spv */,
+				2CDA21DB212DF1ED00B9CE23 /* vert.spv */,
+				2CDA21DA212DED3B00B9CE23 /* compile.sh */,
+				2CDA21D8212DE9C000B9CE23 /* shader.frag */,
+				2CDA21D9212DE9C000B9CE23 /* shader.vert */,
+			);
+			path = shaders;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
