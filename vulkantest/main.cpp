@@ -165,8 +165,6 @@ public:
 #ifndef NDEBUG
         std::cout << "Built for debugging" << std::endl;
 #endif
-        initTime = clock();
-        initRVal = verts[0].color[0];
         
         initWindow();
         initVulkan();
@@ -200,11 +198,15 @@ private:
     size_t currentFrame = 0;
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
     
     VkCommandPool tmpCommands;
     
-    clock_t initTime;
-    float initRVal;
+    float initPos = verts[0].pos[0];
+    clock_t frameStartClock;
+    float deltaTime = 0.0f;
+    float elapsedTime = 0.0f;
     
     bool framebufferResized = false;
     
@@ -319,29 +321,35 @@ private:
         createCommandPool(commandPool, 0);
         createCommandPool(tmpCommands, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT);
         
-        createVertexBuffer();
+        createVertAndStagingBuffers();
         createCommandBuffers();
         createSyncObjects();
     }
     
-    void createVertexBuffer() {
+    //copy updated vert data to staging buffer then GPU local vert buffer
+    void copyVertDataToBuffers() {
         VkDeviceSize size = sizeof(verts[0]) * verts.size();
-        
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-        createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
         
         void* data;
         vkMapMemory(device, stagingBufferMemory, 0, size, 0, &data);
         memcpy(data, verts.data(), (size_t) size);
         vkUnmapMemory(device, stagingBufferMemory);
         
+        copyBuffer(stagingBuffer, vertexBuffer, size);
+    }
+    
+    void createVertAndStagingBuffers() {
+        //creates staging buffer, vert buffer, transfers data to staging buffer then to vert buffer on GPU local memory
+        
+        VkDeviceSize size = sizeof(verts[0]) * verts.size();
+        
+//        VkBuffer stagingBuffer;
+//        VkDeviceMemory stagingBufferMemory;
+        createBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
+        
         createBuffer(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, vertexBuffer, vertexBufferMemory);
         
         copyBuffer(stagingBuffer, vertexBuffer, size);
-        
-        vkDestroyBuffer(device, stagingBuffer, nullptr);
-        vkFreeMemory(device, stagingBufferMemory, nullptr);
     }
     
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
@@ -1186,6 +1194,12 @@ private:
 
     void mainLoop() {
         while (!glfwWindowShouldClose(window)) {
+            //these numbers are totally wrong but it works for now lol
+            //TODO: figure out why my dTime and elapsedTime are too slow
+            clock_t now = clock();
+            deltaTime = (float) (now - frameStartClock) / CLOCKS_PER_SEC;
+            elapsedTime += deltaTime;
+            frameStartClock = now;
             glfwPollEvents();
             playWithVerts();
             drawFrame();
@@ -1195,13 +1209,18 @@ private:
     }
     
     void playWithVerts() {
-        //so yeah this won't work until we have buffer copying implemented lol
 //        std::cout << verts[0].color[0] << std::endl;
-        verts[0].color = glm::vec3(std::min(initRVal + (float)sin(clock() - initTime), 1.0f), verts[0].color[1], verts[0].color[2]);
+        verts[0].pos = glm::vec2(sin(6.28f * elapsedTime), verts[0].pos[1]);
+        verts[1].color = glm::vec3(std::max(sin(6.28f * elapsedTime), 0.0f), std::max(sin(6.28f * elapsedTime + 3.14f), 0.0f), verts[1].color[2]);
+        
+        copyVertDataToBuffers();
     }
     
     void cleanup() {
         cleanupSwapchain();
+        
+        vkDestroyBuffer(device, stagingBuffer, nullptr);
+        vkFreeMemory(device, stagingBufferMemory, nullptr);
         
         vkDestroyBuffer(device, vertexBuffer, nullptr);
         vkFreeMemory(device, vertexBufferMemory, nullptr);
