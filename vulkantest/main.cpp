@@ -1231,7 +1231,7 @@ private:
             elapsedTime += deltaTime;
             frameStartClock = now;
             glfwPollEvents();
-//            playWithVerts();
+            playWithVerts();
             drawFrame();
         }
         
@@ -1240,9 +1240,14 @@ private:
     
     void playWithVerts() {
 //        std::cout << verts[0].color[0] << std::endl;
-        verts[0].pos = glm::vec2(sin(6.28f * elapsedTime), verts[0].pos[1]);
-        verts[1].color = glm::vec3(std::max(sin(6.28f * elapsedTime), 0.0f), std::max(sin(6.28f * elapsedTime + 3.14f), 0.0f), verts[1].color[2]);
-        
+//        verts[0].pos = glm::vec2(sin(6.28f * elapsedTime), verts[0].pos[1]);
+        for (size_t i = 0; i < verts.size(); i ++) {
+            glm::vec3 color = verts[i].color;
+            color[i % 3] = abs(sin(elapsedTime + i));
+            color[(i + 1) % 3] = abs(sin(elapsedTime * 1.5f + i));
+            color[(i + 2) % 3] = abs(sin(elapsedTime * 3.0f + i));
+            verts[i].color = color;
+        }
         
         copyVertDataToBuffers();
     }
