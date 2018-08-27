@@ -116,6 +116,7 @@
 				2CDA21BD212CB5D900B9CE23 /* Sources */,
 				2CDA21BE212CB5D900B9CE23 /* Frameworks */,
 				2CDA21BF212CB5D900B9CE23 /* CopyFiles */,
+				2CA4047D2134458200C9576F /* Compile Shaders */,
 			);
 			buildRules = (
 			);
@@ -157,6 +158,23 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		2CA4047D2134458200C9576F /* Compile Shaders */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Compile Shaders";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = $SRCROOT/vulkantest/shaders/compile.sh;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		2CDA21BD212CB5D900B9CE23 /* Sources */ = {
