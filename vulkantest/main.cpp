@@ -235,6 +235,7 @@ private:
     
     float initPos = verts[0].pos[0];
     clock_t frameStartClock;
+    float startTime;
     float deltaTime = 0.0f;
     float elapsedTime = 0.0f;
     
@@ -255,7 +256,7 @@ private:
             throw std::runtime_error("Failed to acquire swapchain image");
         }
         
-        updateUniformBuffer(imageIndex);
+//        updateUniformBuffer(imageIndex);
         
         VkSubmitInfo submitInfo = {};
         submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -369,7 +370,7 @@ private:
         uboLayoutBinding.binding = 0;
         uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         uboLayoutBinding.descriptorCount = 1;
-        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         uboLayoutBinding.pImmutableSamplers = nullptr;
         
         VkDescriptorSetLayoutCreateInfo layoutInfo = {};
@@ -442,6 +443,10 @@ private:
             
             vkUpdateDescriptorSets(device, 1, &descWrite, 0, nullptr);
         }
+    }
+    
+    void updateTimeInfo() {
+        
     }
     
     void updateUniformBuffer(uint32_t currentImage) {
@@ -1357,12 +1362,14 @@ private:
         while (!glfwWindowShouldClose(window)) {
             //these numbers are totally wrong but it works for now lol
             //TODO: figure out why my dTime and elapsedTime are too slow
-            clock_t now = clock();
-            deltaTime = (float) (now - frameStartClock) / CLOCKS_PER_SEC;
-            elapsedTime += deltaTime;
-            frameStartClock = now;
+//            clock_t now = clock();
+//            deltaTime = (float) (now - frameStartClock) / CLOCKS_PER_SEC;
+//            elapsedTime += deltaTime;
+//            frameStartClock = now;
             glfwPollEvents();
 //            playWithVerts();
+            updateTimeInfo();
+            updateUniformBuffer((uint32_t) currentFrame);
             drawFrame();
         }
         
