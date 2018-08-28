@@ -10,6 +10,7 @@
  TODO:
  update notes lol
  change buffer allocations to be in one contiguous buffer, using offsets (described in index buffer chapter)
+ fix (seemingly) erroneous validation error warnings
  */
 
 /*
@@ -224,6 +225,8 @@ private:
     VkDeviceMemory stagingBufferMemory;
     VkBuffer indexBuffer;
     VkDeviceMemory indexBufferMemory;
+    VkDescriptorPool descriptorPool;
+    std::vector<VkDescriptorSet> descriptorSets;
     
     std::vector<VkBuffer> uniformBuffers;
     std::vector<VkDeviceMemory> uniformBuffersMemory;
@@ -355,6 +358,8 @@ private:
         createVertAndStagingBuffers();
         createIndexBuffer();
         createUniformBuffers();
+        createDescriptorPool();
+        createDescriptorSets();
         createCommandBuffers();
         createSyncObjects();
     }
@@ -385,6 +390,57 @@ private:
         
         for (size_t i = 0; i < swapchainImages.size(); i ++) {
             createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, uniformBuffers[i], uniformBuffersMemory[i]);
+        }
+    }
+    
+    void createDescriptorPool() {
+        VkDescriptorPoolSize poolSize = {};
+        poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSize.descriptorCount = static_cast<uint32_t>(swapchainImages.size());
+        
+        VkDescriptorPoolCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        createInfo.poolSizeCount = 1;
+        createInfo.pPoolSizes = &poolSize;
+        createInfo.maxSets = static_cast<uint32_t>(swapchainImages.size());
+        
+        if (vkCreateDescriptorPool(device, &createInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create descriptor pool");
+        }
+    }
+    
+    void createDescriptorSets() {
+        std::vector<VkDescriptorSetLayout> layouts(swapchainImages.size(), descriptorSetLayout);
+        VkDescriptorSetAllocateInfo allocInfo = {};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = descriptorPool;
+        allocInfo.descriptorSetCount = static_cast<uint32_t>(swapchainImages.size());
+        allocInfo.pSetLayouts = layouts.data();
+        
+        descriptorSets.resize(swapchainImages.size());
+        if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSets[0]) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to allocate descriptor sets");
+        }
+        
+        for(size_t i = 0; i < swapchainImages.size(); i ++) {
+            VkDescriptorBufferInfo bufferInfo = {};
+            bufferInfo.buffer = uniformBuffers[i];
+            bufferInfo.offset = 0;
+            bufferInfo.range = sizeof(UniformBufferObject);
+            
+            VkWriteDescriptorSet descWrite = {};
+            descWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descWrite.dstSet = descriptorSets[i];
+            descWrite.dstBinding = 0;
+            descWrite.dstArrayElement = 0;
+            
+            descWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            descWrite.descriptorCount = 1;
+            descWrite.pBufferInfo = &bufferInfo;
+            descWrite.pImageInfo = nullptr;
+            descWrite.pTexelBufferView = nullptr;
+            
+            vkUpdateDescriptorSets(device, 1, &descWrite, 0, nullptr);
         }
     }
     
@@ -621,7 +677,7 @@ private:
         rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth = 1.0f;
         rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-        rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
         rasterizer.depthBiasEnable = VK_FALSE;
         rasterizer.depthBiasConstantFactor = 0.0f;
         rasterizer.depthBiasClamp = 0.0f;
@@ -828,7 +884,9 @@ private:
             vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
             
 //            vkCmdDraw(commandBuffers[i], static_cast<uint32_t>(verts.size()), 1, 0, 0);
-//            vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(vertIndices.size()), 1, 0, 0, 0);
+            
+            vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
+            
             vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(vertIndices.size()), 1, 0, 0, 0);
             
             vkCmdEndRenderPass(commandBuffers[i]);
@@ -1328,6 +1386,7 @@ private:
     void cleanup() {
         cleanupSwapchain();
         
+        vkDestroyDescriptorPool(device, descriptorPool, nullptr);
         vkDestroyDescriptorSetLayout(device, descriptorSetLayout, nullptr);
         
         for (size_t i = 0; i < swapchainImages.size(); i ++) {
